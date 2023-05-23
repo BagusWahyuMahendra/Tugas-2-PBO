@@ -15,7 +15,7 @@ public class Server {
 
     private class RequestHandler implements HttpHandler {
         public void handle (HttpExchange httpExchange) throws IOException{
-            PrintStream out = new PrintStream( (httpExchange.getResponseBody());
+            PrintStream out = new PrintStream( (httpExchange.getResponseBody()));
             handle(httpExchange, out);
         }
     }
