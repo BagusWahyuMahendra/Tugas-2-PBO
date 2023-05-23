@@ -13,6 +13,12 @@ import java.net.URI;
 public class Server {
     private HttpServer server;
 
+    public Server(int port) throws Exception{
+        server = HttpServer.create(new InetSocketAddress(port),128 );
+        HttpContext context = server.createContext("/", new RequestHandler());
+        server.start();
+    }
+
     private class RequestHandler implements HttpHandler {
         public void handle (HttpExchange httpExchange) throws IOException{
             PrintStream out = new PrintStream( (httpExchange.getResponseBody()));
@@ -25,12 +31,6 @@ public class Server {
         String path = uri.getPath();
         System.out.println("path : %s\n", path);
         Server.processHttpExchange(httpExchange);
-    }
-
-    public Server(int port) throws Exception{
-        server = HttpServer.create(new InetSocketAddress(port),128 );
-        HttpContext context = server.createContext("/", new RequestHandler());
-        server.start();
     }
 
     public static void processHttpExchange(HttpExchange httpExchange){
