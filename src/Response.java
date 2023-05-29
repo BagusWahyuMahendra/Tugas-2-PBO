@@ -78,6 +78,7 @@ public class Response {
             }
         }
 
+
         private void handleGetUserById(HttpExchange exchange) throws IOException {
             //            if (!validateApiKey(exchange)) {
             //                sendErrorResponse(exchange, 401, "Unauthorized");
@@ -112,13 +113,17 @@ public class Response {
             }
         }
 
+
+
+
+
         private void handleCreateUser(HttpExchange exchange) throws IOException {
             //            if (!validateApiKey(exchange)) {
             //                sendErrorResponse(exchange, 401, "Unauthorized");
             //                return;
             //            }
 
-            String requestBody = getRequestData(exchange);
+            String requestBody = Request.getRequestData(exchange);
             try {
                 JSONObject userObject = new JSONObject(requestBody);
                 String firstName = userObject.getString("first_name");
@@ -171,7 +176,7 @@ public class Response {
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
-            String requestBody = getRequestData(exchange);
+            String requestBody = Request.getRequestData(exchange);
             try {
                 JSONObject userObject = new JSONObject(requestBody);
                 String firstName = userObject.getString("first_name");
@@ -261,16 +266,387 @@ public class Response {
     //        return apiKey != null && apiKey.equals(API_KEY);
     //    }
 
-    private static String getRequestData(HttpExchange exchange) throws IOException {
-        InputStream inputStream = exchange.getRequestBody();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+    static class ProductsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
 
-        StringBuilder requestData = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            requestData.append(line);
+            if (method.equals("GET")) {
+                if (path.equals("/products")) {
+                    handleGetProducts(exchange);
+                    return;
+                } else if (path.matches("/products/\\d+")) {
+                    handleGetProductById(exchange);
+                    return;
+                }
+            } else if (method.equals("POST") && path.equals("/products")) {
+                handleCreateProduct(exchange);
+                return;
+            } else if (method.equals("PUT") && path.matches("/products/\\d+")) {
+                handleUpdateProduct(exchange);
+                return;
+            } else if (method.equals("DELETE") && path.matches("/products/\\d+")) {
+                handleDeleteProduct(exchange);
+                return;
+            }
+
+            sendErrorResponse(exchange, 404, "Not Found");
         }
 
-        return requestData.toString();
+        private void handleGetProducts(HttpExchange exchange) throws IOException {
+            try (Connection connection = Database.connect();
+                 Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_products")) {
+
+                JSONArray productsArray = new JSONArray();
+
+                while (resultSet.next()) {
+                    JSONObject productObject = new JSONObject();
+                    productObject.put("id_product", resultSet.getInt("id_product"));
+                    productObject.put("id_user", resultSet.getInt("id_user"));
+                    productObject.put("title", resultSet.getString("title"));
+                    productObject.put("description", resultSet.getString("description"));
+                    productObject.put("price", resultSet.getDouble("price"));
+                    productObject.put("stok", resultSet.getInt("stok"));
+
+                    productsArray.put(productObject);
+                }
+
+                sendResponse(exchange, 200, productsArray.toString());
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 500, "Internal Server Error");
+            }
+        }
+
+        private void handleGetProductById(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect();
+                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM tb_products WHERE id_product = ?")) {
+
+                statement.setInt(1, productId);
+
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()) {
+                    JSONObject productObject = new JSONObject();
+                    productObject.put("id_product", resultSet.getInt("id_product"));
+                    productObject.put("id_user", resultSet.getInt("id_user"));
+                    productObject.put("title", resultSet.getString("title"));
+                    productObject.put("description", resultSet.getString("description"));
+                    productObject.put("price", resultSet.getDouble("price"));
+                    productObject.put("stok", resultSet.getInt("stok"));
+
+                    sendResponse(exchange, 200, productObject.toString());
+                } else {
+                    sendErrorResponse(exchange, 404, "Product not found");
+                }
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 500, "Internal Server Error");
+            }
+        }
+
+        private void handleCreateProduct(HttpExchange exchange) throws IOException {
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject productObject = new JSONObject(requestBody);
+                int userId = productObject.getInt("id_user");
+                String title = productObject.getString("title");
+                String description = productObject.getString("description");
+                double price = productObject.getDouble("price");
+                int stok = productObject.getInt("stok");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "INSERT INTO tb_products (id_user, title, description, price, stok) " +
+                                     "VALUES (?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+
+                    statement.setInt(1, userId);
+                    statement.setString(2, title);
+                    statement.setString(3, description);
+                    statement.setDouble(4, price);
+                    statement.setInt(5, stok);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        ResultSet generatedKeys = statement.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            int productId = generatedKeys.getInt(1);
+                            JSONObject responseObj = new JSONObject();
+                            responseObj.put("id_product", productId);
+                            responseObj.put("message", "Product created successfully");
+                            sendResponse(exchange, 201, responseObj.toString());
+                            return;
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleUpdateProduct(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject productObject = new JSONObject(requestBody);
+                int userId = productObject.getInt("id_user");
+                String title = productObject.getString("title");
+                String description = productObject.getString("description");
+                double price = productObject.getDouble("price");
+                int stok = productObject.getInt("stok");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "UPDATE tb_products SET id_user = ?, title = ?, description = ?, price = ?, stok = ? WHERE id_product = ?")) {
+
+                    statement.setInt(1, userId);
+                    statement.setString(2, title);
+                    statement.setString(3, description);
+                    statement.setDouble(4, price);
+                    statement.setInt(5, stok);
+                    statement.setInt(6, productId);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        JSONObject responseObj = new JSONObject();
+                        responseObj.put("message", "Product updated successfully");
+                        sendResponse(exchange, 200, responseObj.toString());
+                        return;
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleDeleteProduct(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect();
+                 PreparedStatement statement = connection.prepareStatement("DELETE FROM tb_products WHERE id_product = ?")) {
+
+                statement.setInt(1, productId);
+
+                int affectedRows = statement.executeUpdate();
+                if (affectedRows > 0) {
+                    JSONObject responseObj = new JSONObject();
+                    responseObj.put("message", "Product deleted successfully");
+                    sendResponse(exchange, 200, responseObj.toString());
+                    return;
+                }
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 404, "Product not found");
+        }
     }
+
+    static class OrdersHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+
+            if (method.equals("GET")) {
+                if (path.equals("/orders")) {
+                    handleGetOrders(exchange);
+                    return;
+                } else if (path.matches("/orders/\\d+")) {
+                    handleGetOrderById(exchange);
+                    return;
+                }
+            } else if (method.equals("POST") && path.equals("/orders")) {
+                handleCreateOrder(exchange);
+                return;
+            } else if (method.equals("PUT") && path.matches("/orders/\\d+")) {
+                handleUpdateOrder(exchange);
+                return;
+            } else if (method.equals("DELETE") && path.matches("/orders/\\d+")) {
+                handleDeleteOrder(exchange);
+                return;
+            }
+
+            sendErrorResponse(exchange, 404, "Not Found");
+        }
+
+        private void handleGetOrders(HttpExchange exchange) throws IOException {
+            try (Connection connection = Database.connect();
+                 Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_orders")) {
+
+                JSONArray ordersArray = new JSONArray();
+
+                while (resultSet.next()) {
+                    JSONObject orderObject = new JSONObject();
+                    orderObject.put("id_order", resultSet.getInt("id_order"));
+                    orderObject.put("id_user", resultSet.getInt("id_user"));
+                    orderObject.put("note", resultSet.getString("note"));
+                    orderObject.put("total", resultSet.getDouble("total"));
+                    orderObject.put("discount", resultSet.getDouble("discount"));
+                    orderObject.put("is_paid", resultSet.getBoolean("is_paid"));
+
+                    ordersArray.put(orderObject);
+                }
+
+                sendResponse(exchange, 200, ordersArray.toString());
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 500, "Internal Server Error");
+            }
+        }
+
+        private void handleGetOrderById(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect();
+                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM tb_orders WHERE id_order = ?")) {
+
+                statement.setInt(1, orderId);
+
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()) {
+                    JSONObject orderObject = new JSONObject();
+                    orderObject.put("id_order", resultSet.getInt("id_order"));
+                    orderObject.put("id_user", resultSet.getInt("id_user"));
+                    orderObject.put("note", resultSet.getString("note"));
+                    orderObject.put("total", resultSet.getDouble("total"));
+                    orderObject.put("discount", resultSet.getDouble("discount"));
+                    orderObject.put("is_paid", resultSet.getBoolean("is_paid"));
+
+                    sendResponse(exchange, 200, orderObject.toString());
+                } else {
+                    sendErrorResponse(exchange, 404, "Order not found");
+                }
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 500, "Internal Server Error");
+            }
+        }
+
+        private void handleCreateOrder(HttpExchange exchange) throws IOException {
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject orderObject = new JSONObject(requestBody);
+                int userId = orderObject.getInt("id_user");
+                String note = orderObject.getString("note");
+                double total = orderObject.getDouble("total");
+                double discount = orderObject.getDouble("discount");
+                boolean isPaid = orderObject.getBoolean("is_paid");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "INSERT INTO tb_orders (id_user, note, total, discount, is_paid) " +
+                                     "VALUES (?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+
+                    statement.setInt(1, userId);
+                    statement.setString(2, note);
+                    statement.setDouble(3, total);
+                    statement.setDouble(4, discount);
+                    statement.setBoolean(5, isPaid);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        ResultSet generatedKeys = statement.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            int orderId = generatedKeys.getInt(1);
+                            JSONObject responseObj = new JSONObject();
+                            responseObj.put("id_order", orderId);
+                            responseObj.put("message", "Order created successfully");
+                            sendResponse(exchange, 201, responseObj.toString());
+                            return;
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleUpdateOrder(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject orderObject = new JSONObject(requestBody);
+                int userId = orderObject.getInt("id_user");
+                String note = orderObject.getString("note");
+                double total = orderObject.getDouble("total");
+                double discount = orderObject.getDouble("discount");
+                boolean isPaid = orderObject.getBoolean("is_paid");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "UPDATE tb_orders SET id_user = ?, note = ?, total = ?, discount = ?, is_paid = ? WHERE id_order = ?")) {
+
+                    statement.setInt(1, userId);
+                    statement.setString(2, note);
+                    statement.setDouble(3, total);
+                    statement.setDouble(4, discount);
+                    statement.setBoolean(5, isPaid);
+                    statement.setInt(6, orderId);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        JSONObject responseObj = new JSONObject();
+                        responseObj.put("message", "Order updated successfully");
+                        sendResponse(exchange, 200, responseObj.toString());
+                        return;
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleDeleteOrder(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect();
+                 PreparedStatement statement = connection.prepareStatement("DELETE FROM tb_orders WHERE id_order = ?")) {
+
+                statement.setInt(1, orderId);
+
+                int affectedRows = statement.executeUpdate();
+                if (affectedRows > 0) {
+                    JSONObject responseObj = new JSONObject();
+                    responseObj.put("message", "Order deleted successfully");
+                    sendResponse(exchange, 200, responseObj.toString());
+                    return;
+                }
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 404, "Order not found");
+        }
+    }
+
+
 }
