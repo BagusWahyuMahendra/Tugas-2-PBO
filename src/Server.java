@@ -1,42 +1,64 @@
+import java.io.BufferedReader;
+import java.io.IOException;
 
-import com.sun.net.httpserver.HttpContext;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.net.URI;
-
-
 public class Server {
-    private HttpServer server;
+    private static final String API_KEY_ENV_VARIABLE = "API_KEY";
+    //    private static final String DATABASE_URL = "jdbc:sqlite:path-to-your-sqlite-database";
 
-    public Server(int port) throws Exception{
-        server = HttpServer.create(new InetSocketAddress(port),128 );
-        HttpContext context = server.createContext("/", new RequestHandler());
-        server.start();
-    }
+    static class DataHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String requestMethod = exchange.getRequestMethod();
+            if (requestMethod.equalsIgnoreCase("PUT")) {
+                String apiKey = System.getenv(API_KEY_ENV_VARIABLE);
+                String requestApiKey = exchange.getRequestHeaders().getFirst("Authorization");
 
-    private class RequestHandler implements HttpHandler {
-        public void handle (HttpExchange httpExchange) throws IOException{
-            PrintStream out = new PrintStream( (httpExchange.getResponseBody()));
-            handle(httpExchange, out);
+                if (requestApiKey == null || !requestApiKey.equals(apiKey)) {
+                    sendResponse(exchange, 401, "Unauthorized");
+                    return;
+                }
+
+                // Proses permintaan dan manipulasi database
+                // ...
+                // Contoh: Menambahkan data ke database
+                // String jsonData = requestBodyToString(exchange);
+                // Data data = parseJsonData(jsonData);
+                // insertDataToDatabase(data);
+                // sendResponse(exchange, 200, "Data added to database.");
+
+                sendResponse(exchange, 200, "Request authorized. Data added to database.");
+            } else {
+                sendResponse(exchange, 404, "Not Found");
+            }
         }
     }
 
-    private void handle(HttpExchange httpExchange, PrintStream out){
-        URI uri = httpExchange.getRequestURI();
-        String path = uri.getPath();
-        System.out.println("path : %s\n", path);
-        Server.processHttpExchange(httpExchange);
+    private static String requestBodyToString(HttpExchange exchange) throws IOException {
+        // Baca dan konversi request body menjadi string
+        StringBuilder requestBody = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                requestBody.append(line);
+            }
+        }
+        return requestBody.toString();
     }
 
-    public static void processHttpExchange(HttpExchange httpExchange){
-        Request req = new Request(httpExchange);
-        System.out.println(req.getBody());
-
+    private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(statusCode, response.length());
+        OutputStream outputStream = exchange.getResponseBody();
+        outputStream.write(response.getBytes());
+        outputStream.close();
     }
 
 }

@@ -1,3 +1,5 @@
+import com.sun.net.httpserver.HttpExchange;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,6 +15,9 @@ public class Request {
         this.path = path;
         this.headers = headers;
         this.body = body;
+    }
+
+    public Request(HttpExchange httpExchange) {
     }
 
     public String getMethod() {
