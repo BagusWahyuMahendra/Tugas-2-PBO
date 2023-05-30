@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 
 
 import org.json.JSONArray;
@@ -16,69 +18,120 @@ import com.sun.net.httpserver.HttpHandler;
 
 
 public class Response {
-    static class UsersHandler implements HttpHandler {
+    public static class UsersHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
 
-            if (method.equals("GET")) {
-                if (path.equals("/users")) {
-                    handleGetUsers(exchange);
-                    return;
-                } else if (path.matches("/users/\\d+")) {
-                    handleGetUserById(exchange);
-                    return;
-                }
-            } else if (method.equals("POST") && path.equals("/users")) {
-                handleCreateUser(exchange);
-                return;
-            } else if (method.equals("PUT")) {
-                if (path.matches("/users/\\d+")) {
-                    handleUpdateUser(exchange);
-                    return;
-                }
-            } else if (method.equals("DELETE") && path.matches("/users/\\d+")) {
-                if (path.matches("/users/\\d+")) {
-                    handleDeleteUser(exchange);
-                    return;
-                }
+            switch (method) {
+                case "GET":
+                    if (path.equals("/users")) {
+                        handleGetUsers(exchange);
+                        return;
+                    } else if (path.matches("/users/\\d+")) {
+                        handleGetUserById(exchange);
+                        return;
+                    }
+                    break;
+                case "POST":
+                    if (path.matches("/users")) {
+                        handleCreateUser(exchange);
+                        return;
+                    }
+                    break;
+                case "PUT":
+                    if (path.matches("/users/\\d+")) {
+                        handleUpdateUser(exchange);
+                        return;
+                    } else if (path.matches("/users/addresses/\\d+")) {
+                        handleUpdateAddress(exchange);
+                        return;
+                    }
+                    break;
+                case "DELETE":
+                    if (path.matches("/users/\\d+")) {
+                        handleDeleteUser(exchange);
+                        return;
+                    } else if (path.matches("/users/addresses/\\d+")) {
+                        handleDeleteAddress(exchange);
+                        return;
+                    }
+                    break;
             }
 
             sendErrorResponse(exchange, 404, "Not Found");
         }
 
         private void handleGetUsers(HttpExchange exchange) throws IOException {
-            //            if (!validateApiKey(exchange)) {
-            //                sendErrorResponse(exchange, 401, "Unauthorized");
-            //                return;
-            //            }
+//            if (!validateApiKey(exchange)) {
+//                sendErrorResponse(exchange, 401, "Unauthorized");
+//                return;
+//            }
 
-            try (Connection connection = Database.connect();
-                 Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_users")) {
+            // Mendapatkan nilai query params "type" dari URL
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> queryParams = parseQueryParams(query);
+            String userType = queryParams.get("type");
 
-                JSONArray usersArray = new JSONArray();
+            if (userType != null) {
+                // Menampilkan pengguna berdasarkan tipe (type)
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "SELECT * FROM tb_users WHERE type = ?")) {
 
-                while (resultSet.next()) {
-                    JSONObject userObject = new JSONObject();
-                    userObject.put("id_user", resultSet.getInt("id_user"));
-                    userObject.put("first_name", resultSet.getString("first_name"));
-                    userObject.put("last_name", resultSet.getString("last_name"));
-                    userObject.put("email", resultSet.getString("email"));
-                    userObject.put("phone_number", resultSet.getString("phone_number"));
-                    userObject.put("type", resultSet.getString("type"));
+                    statement.setString(1, userType);
+                    ResultSet resultSet = statement.executeQuery();
 
-                    usersArray.put(userObject);
+                    JSONArray usersArray = new JSONArray();
+                    while (resultSet.next()) {
+                        JSONObject userObject = new JSONObject();
+                        userObject.put("id_user", resultSet.getInt("id_user"));
+                        userObject.put("first_name", resultSet.getString("first_name"));
+                        userObject.put("last_name", resultSet.getString("last_name"));
+                        userObject.put("email", resultSet.getString("email"));
+                        userObject.put("phone_number", resultSet.getString("phone_number"));
+                        userObject.put("type", resultSet.getString("type"));
+                        usersArray.put(userObject);
+                    }
+
+                    JSONObject response = new JSONObject();
+                    response.put("tb_users", usersArray);
+
+                    sendResponse(exchange, 200, response.toString());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
                 }
+            } else {
+                // Menampilkan semua pengguna
+                try (Connection connection = Database.connect();
+                     Statement statement = connection.createStatement()) {
 
-                sendResponse(exchange, 200, usersArray.toString());
-            } catch (SQLException | JSONException e) {
-                e.printStackTrace();
-                sendErrorResponse(exchange, 500, "Internal Server Error");
+                    ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_users");
+
+                    JSONArray usersArray = new JSONArray();
+                    while (resultSet.next()) {
+                        JSONObject userObject = new JSONObject();
+                        userObject.put("id_user", resultSet.getInt("id_user"));
+                        userObject.put("first_name", resultSet.getString("first_name"));
+                        userObject.put("last_name", resultSet.getString("last_name"));
+                        userObject.put("email", resultSet.getString("email"));
+                        userObject.put("phone_number", resultSet.getString("phone_number"));
+                        userObject.put("type", resultSet.getString("type"));
+                        usersArray.put(userObject);
+                    }
+
+                    JSONObject response = new JSONObject();
+                    response.put("tb_users", usersArray);
+
+                    sendResponse(exchange, 200, response.toString());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                }
             }
         }
-
 
         private void handleGetUserById(HttpExchange exchange) throws IOException {
 //            if (!validateApiKey(exchange)) {
@@ -91,7 +144,11 @@ public class Response {
 
             try (Connection connection = Database.connect();
                  PreparedStatement statement = connection.prepareStatement(
-                         "SELECT * FROM tb_users WHERE id_user = ?")) {
+                         "SELECT tb_users.id_user, tb_users.first_name, tb_users.last_name, tb_users.email, " +
+                                 "tb_users.phone_number, tb_users.type, tb_address.type AS address_type, tb_address.line1, " +
+                                 "tb_address.line2, tb_address.city, tb_address.province, tb_address.postcode " +
+                                 "FROM tb_users LEFT JOIN tb_address ON tb_users.id_user = tb_address.id_user " +
+                                 "WHERE tb_users.id_user = ?")) {
 
                 statement.setInt(1, userId);
 
@@ -105,6 +162,24 @@ public class Response {
                     userObject.put("phone_number", resultSet.getString("phone_number"));
                     userObject.put("type", resultSet.getString("type"));
 
+                    JSONArray addressesArray = new JSONArray();
+                    while (resultSet.getString("address_type") != null) {
+                        JSONObject addressObject = new JSONObject();
+                        addressObject.put("type", resultSet.getString("address_type"));
+                        addressObject.put("line1", resultSet.getString("line1"));
+                        addressObject.put("line2", resultSet.getString("line2"));
+                        addressObject.put("city", resultSet.getString("city"));
+                        addressObject.put("province", resultSet.getString("province"));
+                        addressObject.put("postcode", resultSet.getString("postcode"));
+                        addressesArray.put(addressObject);
+                        if (!resultSet.next()) {
+                            break;
+                        }
+                    }
+
+                    if (addressesArray.length() > 0) {
+                        userObject.put("tb_address", addressesArray);
+                    }
 
                     sendResponse(exchange, 200, userObject.toString());
                     return;
@@ -115,7 +190,6 @@ public class Response {
             }
             sendErrorResponse(exchange, 404, "User not found");
         }
-
 
         private void handleCreateUser(HttpExchange exchange) throws IOException {
 //            if (!validateApiKey(exchange)) {
@@ -155,10 +229,40 @@ public class Response {
                     }
                 }
 
+                // Check if the user has address data
+                if (userObject.has("tb_address")) {
+                    JSONArray addressesArray = userObject.getJSONArray("tb_address");
+                    for (int i = 0; i < addressesArray.length(); i++) {
+                        JSONObject addressObject = addressesArray.getJSONObject(i);
+                        String addressType = addressObject.getString("type");
+                        String line1 = addressObject.getString("line1");
+                        String line2 = addressObject.getString("line2");
+                        String city = addressObject.getString("city");
+                        String province = addressObject.getString("province");
+                        String postcode = addressObject.getString("postcode");
+
+                        // Insert address data into the addresses table
+                        try (Connection connection = Database.connect();
+                             PreparedStatement statement = connection.prepareStatement(
+                                     "INSERT INTO tb_address (id_user, type, line1, line2, city, province, postcode) " +
+                                             "VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+
+                            statement.setInt(1, userId);
+                            statement.setString(2, addressType);
+                            statement.setString(3, line1);
+                            statement.setString(4, line2);
+                            statement.setString(5, city);
+                            statement.setString(6, province);
+                            statement.setString(7, postcode);
+                            statement.executeUpdate();
+                        }
+
+                    }
+                }
                 // Create the response object
                 JSONObject response = new JSONObject();
                 response.put("message", "User created successfully");
-                response.put("id_user", userId);
+                response.put("user_id", userId);
 
                 sendResponse(exchange, 201, response.toString());
             } catch (JSONException e) {
@@ -169,11 +273,12 @@ public class Response {
             }
         }
 
+
         private void handleUpdateUser(HttpExchange exchange) throws IOException {
-            //            if (!validateApiKey(exchange)) {
-            //                sendErrorResponse(exchange, 401, "Unauthorized");
-            //                return;
-            //            }
+//            if (!validateApiKey(exchange)) {
+//                sendErrorResponse(exchange, 401, "Unauthorized");
+//                return;
+//            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -215,36 +320,132 @@ public class Response {
             sendErrorResponse(exchange, 400, "Bad Request");
         }
 
-        private void handleDeleteUser(HttpExchange exchange) throws IOException {
-            //            if (!validateApiKey(exchange)) {
-            //                sendErrorResponse(exchange, 401, "Unauthorized");
-            //                return;
-            //            }
+        private void handleUpdateAddress(HttpExchange exchange) throws IOException {
+//            if (!validateApiKey(exchange)) {
+//                sendErrorResponse(exchange, 401, "Unauthorized");
+//                return;
+//            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
-            try (Connection connection = Database.connect();
-                 PreparedStatement statement = connection.prepareStatement("DELETE FROM tb_users WHERE id_user = ?")) {
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject addressObject = new JSONObject(requestBody);
+                String type = addressObject.getString("type");
+                String line1 = addressObject.getString("line1");
+                String line2 = addressObject.getString("line2");
+                String city = addressObject.getString("city");
+                String province = addressObject.getString("province");
+                String postcode = addressObject.getString("postcode");
 
-                statement.setInt(1, userId);
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "UPDATE tb_address SET type = ?, line1 = ?, line2 = ?, city = ?, province = ?, postcode = ? WHERE id_user = ?")) {
 
-                int affectedRows = statement.executeUpdate();
-                if (affectedRows > 0) {
+                    statement.setString(1, type);
+                    statement.setString(2, line1);
+                    statement.setString(3, line2);
+                    statement.setString(4, city);
+                    statement.setString(5, province);
+                    statement.setString(6, postcode);
+                    statement.setInt(7, userId);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        JSONObject responseObj = new JSONObject();
+                        responseObj.put("message", "Address updated successfully");
+                        sendResponse(exchange, 200, responseObj.toString());
+                        return;
+                    }
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleDeleteAddress(HttpExchange exchange) throws IOException {
+//            if (!validateApiKey(exchange)) {
+//                sendErrorResponse(exchange, 401, "Unauthorized");
+//                return;
+//            }
+
+            String path = exchange.getRequestURI().getPath();
+            int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect()) {
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "DELETE FROM tb_address WHERE id_user = ?")) {
+                    statement.setInt(1, userId);
+                    statement.executeUpdate();
+
+                    statement.setInt(1, userId);
                     JSONObject responseObj = new JSONObject();
-                    responseObj.put("message", "User deleted successfully");
+                    responseObj.put("message", "Address deleted successfully");
                     sendResponse(exchange, 200, responseObj.toString());
                     return;
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
-            } catch (JSONException e){
+            }
+
+            sendErrorResponse(exchange, 404, "User not found");
+        }
+
+        private void handleDeleteUser(HttpExchange exchange) throws IOException {
+//            if (!validateApiKey(exchange)) {
+//                sendErrorResponse(exchange, 401, "Unauthorized");
+//                return;
+//            }
+
+            String path = exchange.getRequestURI().getPath();
+            int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect()) {
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "DELETE FROM tb_address WHERE id_user = ?")) {
+                    statement.setInt(1, userId);
+                    statement.executeUpdate();
+                }
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "DELETE FROM tb_users WHERE id_user = ?")) {
+                    statement.setInt(1, userId);
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        JSONObject responseObj = new JSONObject();
+                        responseObj.put("message", "User deleted successfully");
+                        sendResponse(exchange, 200, responseObj.toString());
+                        return;
+                    }
+                }
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
 
             sendErrorResponse(exchange, 404, "User not found");
         }
+
+
+        private Map<String, String> parseQueryParams(String query) {
+            Map<String, String> params = new HashMap<>();
+            if (query != null) {
+                String[] keyValuePairs = query.split("&");
+                for (String pair : keyValuePairs) {
+                    String[] keyValue = pair.split("=");
+                    if (keyValue.length == 2) {
+                        params.put(keyValue[0], keyValue[1]);
+                    }
+                }
+            }
+            return params;
+        }
     }
+
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.sendResponseHeaders(statusCode, response.length());
