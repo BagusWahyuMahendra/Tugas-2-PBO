@@ -35,7 +35,7 @@ Pada program ini, terdapat beberapa Class yang didesain agar dapat berperan seba
 
 
 # Contoh Pengujian API pada Database E-Commerce
-Berikut merupakan contoh pengujian API pada UserHandler
+Berikut merupakan contoh pengujian API pada UserHandler. Pengujian dilakukan menggunakan Postman
 
 
 
