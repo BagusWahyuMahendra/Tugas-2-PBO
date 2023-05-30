@@ -83,3 +83,23 @@ Berikut merupakan contoh pengujian API pada UserHandler. Pengujian dilakukan men
 
 
 
+Berikut contoh body JSON yang digunakan saat PUT dan POST
+{
+    "tb_address": [
+        {
+            "province": "DKI Jakarta",
+            "city": "Jakarta Selatan",
+            "postcode": "12190",
+            "type": "Home",
+            "line2": "Blok B3 No.10",
+            "line1": "Jl. Kebangsaan Merdeka 10"
+        }
+    ],
+    "last_name": "Mahendra",
+    "phone_number": "08728718972",
+    "id_user": 1,
+    "type": "buyer",
+    "first_name": "Wahyu",
+    "email": "wahyu09mahendra@gmail.com"
+}
+ 
