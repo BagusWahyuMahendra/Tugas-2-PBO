@@ -9,7 +9,7 @@ Contoh umum API termasuk API web seperti RESTful API, SOAP API, API database sep
 Pada program java OOP (Object Oriented Programming) kali ini, API bertugas untuk mengakses dan memanipulasi data pada database dengan nama db_ecommerce yang dibuat menggunakan SQLite. Pada db_ecommerce ini terdapat beberapa entitas, seperti tb_users, tb_address, tb_products, tb_orders, tb_reviews, dan tb_order_details. Keenam entitas tersebut saling berhubungan atau berelasi satu sama lain yang dapat dilihat pada PDM (Physical Data Model) berikut ini.
 
 
-![Screenshot 2023-05-30 131641](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/85f74144-f061-47e8-a36e-6ebdebb1e5c9)
+![Screenshot 2023-05-30 131641](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/9cb4ddff-b40d-42c3-b9c6-d489b054f850)
 
 
 Backend API java ini merupakan program yang digunakan untuk dapat menampilkan, memperbaharui, menambahkan, dan menghapus data yang terdapat pada tabel di db_ecommerce. Untuk mengakses dan memanipulasi database dalam program Java, dapat menggunakan JDBC (Java Database Connectivity). 
