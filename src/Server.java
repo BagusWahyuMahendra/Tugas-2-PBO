@@ -1,9 +1,5 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -11,8 +7,6 @@ import com.sun.net.httpserver.HttpServer;
 
 public class Server {
     private static final String API_KEY_ENV_VARIABLE = "API_KEY";
-    //    private static final String DATABASE_URL = "jdbc:sqlite:path-to-your-sqlite-database";
-
     static class DataHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -25,32 +19,11 @@ public class Server {
                     sendResponse(exchange, 401, "Unauthorized");
                     return;
                 }
-
-                // Proses permintaan dan manipulasi database
-                // ...
-                // Contoh: Menambahkan data ke database
-                // String jsonData = requestBodyToString(exchange);
-                // Data data = parseJsonData(jsonData);
-                // insertDataToDatabase(data);
-                // sendResponse(exchange, 200, "Data added to database.");
-
                 sendResponse(exchange, 200, "Request authorized. Data added to database.");
             } else {
                 sendResponse(exchange, 404, "Not Found");
             }
         }
-    }
-
-    private static String requestBodyToString(HttpExchange exchange) throws IOException {
-        // Baca dan konversi request body menjadi string
-        StringBuilder requestBody = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                requestBody.append(line);
-            }
-        }
-        return requestBody.toString();
     }
 
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {

@@ -10,7 +10,7 @@ public class Database {
             con = DriverManager.getConnection("jdbc:sqlite:db_ecommerce.db");
             System.out.println("Connected!");
         } catch (ClassNotFoundException | SQLException e) {
-            System.out.println(e + "");
+            System.out.println(e + "Not Connected!");
         }
         return con;
     }

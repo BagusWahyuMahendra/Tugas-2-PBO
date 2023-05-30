@@ -1,54 +1,22 @@
 import com.sun.net.httpserver.HttpExchange;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 
 public class Request {
-    private String method;
-    private String path;
-    private Map<String, String> headers;
-    private String body;
+    public static String getRequestData(HttpExchange exchange) throws IOException {
+        InputStream inputStream = exchange.getRequestBody();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
-    public Request(String method, String path, Map<String, String> headers, String body) {
-        this.method = method;
-        this.path = path;
-        this.headers = headers;
-        this.body = body;
-    }
+        StringBuilder requestData = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            requestData.append(line);
+        }
 
-    public Request(HttpExchange httpExchange) {
-    }
-
-    public String getMethod() {
-        return method;
-    }
-
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
-
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
+        return requestData.toString();
     }
 }
