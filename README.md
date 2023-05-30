@@ -35,6 +35,10 @@ Pada program ini, terdapat beberapa Class yang didesain agar dapat berperan seba
 
 
 # Contoh Pengujian API pada Database E-Commerce
+Berikut merupakan contoh pengujian API pada UserHandler
+
+
+
 1. Menampilkan seluruh user yang ada pada tabel users menggunakan : GET http://127.0.0.1:8002/users
 
 
