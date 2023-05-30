@@ -6,6 +6,7 @@ API (Application Programming Interface) adalah sekumpulan aturan dan protokol ya
 Contoh umum API termasuk API web seperti RESTful API, SOAP API, API database seperti JDBC, API sistem operasi seperti Windows API, dan banyak lagi. API juga sering digunakan dalam pengembangan aplikasi mobile, integrasi platform, pengolahan data, dan komunikasi antar sistem secara umum.
 
 
+# PDM Database E-Commerce
 Pada program java OOP (Object Oriented Programming) kali ini, API bertugas untuk mengakses dan memanipulasi data pada database dengan nama db_ecommerce yang dibuat menggunakan SQLite. Pada db_ecommerce ini terdapat beberapa entitas, seperti tb_users, tb_address, tb_products, tb_orders, tb_reviews, dan tb_order_details. Keenam entitas tersebut saling berhubungan atau berelasi satu sama lain yang dapat dilihat pada PDM (Physical Data Model) berikut ini.
 
 
