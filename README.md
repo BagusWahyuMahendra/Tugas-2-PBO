@@ -19,3 +19,11 @@ JDBC adalah API yang menyediakan koneksi dan operasi terhadap berbagai jenis dat
 
 
 Selain JBDC, pada program ini juga menggunakan JSON (JavaScript Object Notation) yang digunakan untuk pertukaran data antara aplikasi Java dengan aplikasi atau layanan lain yang menggunakan format data JSON. JSON dapat digunakan jika sudah menambahkan library JSON ke project yang dibuat berupa file jar.
+
+
+Pada program ini, terdapat beberapa Class yang didesain agar dapat berperan sebagai API, yaitu terdapat Class Main, Database, Server, Response, dan Request.
+1. Pada Class Main, terdapat satu method main yang digunakan untuk mengatur port yang ingin digunakan dan berisikan penanganan rute dari path pengguna
+2. Class Database berfungsi untuk mengkoneksikan java dengan database yang telah dibuat, yaitu database pada SQLite
+3. Class Server berisikan method untuk membuat API KEY, data handler, mengirim respon (send response), dan method untuk memvalidasi API KEY
+4. Class Request berisikan method getRequestData yang berfungsi untuk mendapatkan data permintaan (request data) dari objek HttpExchange. Method tersebut membaca input stream dari HttpExchange dan mengembalikan data permintaan dalam bentuk string.
+5. Class Response berisikan banyak method yang digunakan untuk merespon berbagai path. Pada kelas ini terdapat beberapa Static Class di dalamnya, yaitu UsersHandler, ProductsHandler, OrdersHandler, ReviewsHandler. Di dalam Static Class tersebut berisikan beberapa method yang digunakan untuk menampilkan (GET), menambahkan (POST), memperbaharui (PUT), dan menghapus (DELETE) data di dalam entitas atau tabel yang ada.
