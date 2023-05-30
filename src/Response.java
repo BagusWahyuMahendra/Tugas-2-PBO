@@ -939,10 +939,6 @@ public class Response {
 
 
         private void handleUpdateDetailsOrder(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
 
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
