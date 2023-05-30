@@ -831,28 +831,67 @@ public class Response {
                 return;
             }
 
-            try (Connection connection = Database.connect();
-                 Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_orders")) {
+            // Mendapatkan nilai query params "discount" dari URL
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> queryParams = parseQueryParams(query);
+            String discount = queryParams.get("discount");
 
-                JSONArray ordersArray = new JSONArray();
 
-                while (resultSet.next()) {
-                    JSONObject orderObject = new JSONObject();
-                    orderObject.put("id_order", resultSet.getInt("id_order"));
-                    orderObject.put("id_user", resultSet.getInt("id_user"));
-                    orderObject.put("note", resultSet.getString("note"));
-                    orderObject.put("total", resultSet.getDouble("total"));
-                    orderObject.put("discount", resultSet.getDouble("discount"));
-                    orderObject.put("is_paid", resultSet.getBoolean("is_paid"));
+            if (discount != null) {
+                // Menampilkan pengguna berdasarkan discount
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "SELECT * FROM tb_orders WHERE discount = ?")) {
 
-                    ordersArray.put(orderObject);
+                    statement.setString(1, discount);
+                    ResultSet resultSet = statement.executeQuery();
+
+                    JSONArray ordersArray = new JSONArray();
+                    while (resultSet.next()) {
+                        JSONObject orderObject = new JSONObject();
+                        orderObject.put("id_order", resultSet.getInt("id_order"));
+                        orderObject.put("id_user", resultSet.getInt("id_user"));
+                        orderObject.put("note", resultSet.getString("note"));
+                        orderObject.put("total", resultSet.getDouble("total"));
+                        orderObject.put("discount", resultSet.getDouble("discount"));
+                        orderObject.put("is_paid", resultSet.getBoolean("is_paid"));
+
+                        ordersArray.put(orderObject);
+                    }
+
+                    JSONObject response = new JSONObject();
+                    response.put("tb_orders", ordersArray);
+
+                    sendResponse(exchange, 200, response.toString());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
                 }
+            }else {
 
-                sendResponse(exchange, 200, ordersArray.toString());
-            } catch (SQLException | JSONException e) {
-                e.printStackTrace();
-                sendErrorResponse(exchange, 500, "Internal Server Error");
+                try (Connection connection = Database.connect();
+                     Statement statement = connection.createStatement();
+                     ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_orders")) {
+
+                    JSONArray ordersArray = new JSONArray();
+
+                    while (resultSet.next()) {
+                        JSONObject orderObject = new JSONObject();
+                        orderObject.put("id_order", resultSet.getInt("id_order"));
+                        orderObject.put("id_user", resultSet.getInt("id_user"));
+                        orderObject.put("note", resultSet.getString("note"));
+                        orderObject.put("total", resultSet.getDouble("total"));
+                        orderObject.put("discount", resultSet.getDouble("discount"));
+                        orderObject.put("is_paid", resultSet.getBoolean("is_paid"));
+
+                        ordersArray.put(orderObject);
+                    }
+
+                    sendResponse(exchange, 200, ordersArray.toString());
+                } catch (SQLException | JSONException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                }
             }
         }
 
@@ -862,7 +901,6 @@ public class Response {
                 sendErrorResponse(exchange, 401, "Unauthorized");
                 return;
             }
-
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -1116,6 +1154,19 @@ public class Response {
             }
 
             sendErrorResponse(exchange, 404, "Order not found");
+        }
+        private Map<String, String> parseQueryParams(String query) {
+            Map<String, String> params = new HashMap<>();
+            if (query != null) {
+                String[] keyValuePairs = query.split("&");
+                for (String pair : keyValuePairs) {
+                    String[] keyValue = pair.split("=");
+                    if (keyValue.length == 2) {
+                        params.put(keyValue[0], keyValue[1]);
+                    }
+                }
+            }
+            return params;
         }
     }
 
