@@ -52,7 +52,7 @@ Berikut merupakan contoh pengujian API pada UserHandler. Pengujian dilakukan men
 
 
 
-3. Menampilkan user berdasarkan type user menggunakan param : http://127.0.0.1:8002/users?type=seller
+3. Menampilkan user berdasarkan type user menggunakan param : GET http://127.0.0.1:8002/users?type=seller
 
 
 ![Screenshot 2023-05-30 223414](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/aed01457-5d4c-4620-8076-880ceb099a9e)
