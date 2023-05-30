@@ -64,10 +64,10 @@ public class Response {
         }
 
         private void handleGetUsers(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             // Mendapatkan nilai query params "type" dari URL
             String query = exchange.getRequestURI().getQuery();
@@ -134,10 +134,10 @@ public class Response {
         }
 
         private void handleGetUserById(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -192,10 +192,10 @@ public class Response {
         }
 
         private void handleCreateUser(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String requestBody = Request.getRequestData(exchange);
             try {
@@ -275,10 +275,10 @@ public class Response {
 
 
         private void handleUpdateUser(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -321,10 +321,10 @@ public class Response {
         }
 
         private void handleUpdateAddress(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -370,10 +370,10 @@ public class Response {
         }
 
         private void handleDeleteAddress(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -398,10 +398,10 @@ public class Response {
         }
 
         private void handleDeleteUser(HttpExchange exchange) throws IOException {
-//            if (!validateApiKey(exchange)) {
-//                sendErrorResponse(exchange, 401, "Unauthorized");
-//                return;
-//            }
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -498,32 +498,82 @@ public class Response {
         }
 
         private void handleGetProducts(HttpExchange exchange) throws IOException {
-            try (Connection connection = Database.connect();
-                 Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_products")) {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
-                JSONArray productsArray = new JSONArray();
 
-                while (resultSet.next()) {
-                    JSONObject productObject = new JSONObject();
-                    productObject.put("id_product", resultSet.getInt("id_product"));
-                    productObject.put("id_user", resultSet.getInt("id_user"));
-                    productObject.put("title", resultSet.getString("title"));
-                    productObject.put("description", resultSet.getString("description"));
-                    productObject.put("price", resultSet.getDouble("price"));
-                    productObject.put("stok", resultSet.getInt("stok"));
+            // Mendapatkan nilai query params "price" dari URL
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> queryParams = parseQueryParams(query);
+            String price = queryParams.get("price");
 
-                    productsArray.put(productObject);
+
+            if (price != null) {
+                // Menampilkan pengguna berdasarkan tipe (type)
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "SELECT * FROM tb_products WHERE price = ?")) {
+
+                    statement.setString(1, price);
+                    ResultSet resultSet = statement.executeQuery();
+
+                    JSONArray productArray = new JSONArray();
+                    while (resultSet.next()) {
+                        JSONObject productObject = new JSONObject();
+                        productObject.put("id_product", resultSet.getInt("id_product"));
+                        productObject.put("id_user", resultSet.getInt("id_user"));
+                        productObject.put("title", resultSet.getString("title"));
+                        productObject.put("description", resultSet.getString("description"));
+                        productObject.put("price", resultSet.getDouble("price"));
+                        productObject.put("stok", resultSet.getInt("stok"));
+                        productArray.put(productObject);
+                    }
+
+                    JSONObject response = new JSONObject();
+                    response.put("tb_products", productArray);
+
+                    sendResponse(exchange, 200, response.toString());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
                 }
+            }
+            else {
+                try (Connection connection = Database.connect();
+                     Statement statement = connection.createStatement();
+                     ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_products")) {
 
-                sendResponse(exchange, 200, productsArray.toString());
-            } catch (SQLException | JSONException e) {
-                e.printStackTrace();
-                sendErrorResponse(exchange, 500, "Internal Server Error");
+                    JSONArray productsArray = new JSONArray();
+
+                    while (resultSet.next()) {
+                        JSONObject productObject = new JSONObject();
+                        productObject.put("id_product", resultSet.getInt("id_product"));
+                        productObject.put("id_user", resultSet.getInt("id_user"));
+                        productObject.put("title", resultSet.getString("title"));
+                        productObject.put("description", resultSet.getString("description"));
+                        productObject.put("price", resultSet.getDouble("price"));
+                        productObject.put("stok", resultSet.getInt("stok"));
+
+                        productsArray.put(productObject);
+                    }
+
+                    sendResponse(exchange, 200, productsArray.toString());
+
+                } catch (SQLException | JSONException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                }
             }
         }
 
         private void handleGetProductById(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -554,6 +604,12 @@ public class Response {
 
 
         private void handleGetProductByUser(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+
             String path = exchange.getRequestURI().getPath();
             int userId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -586,6 +642,11 @@ public class Response {
 
 
         private void handleCreateProduct(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String requestBody = Request.getRequestData(exchange);
             try {
                 JSONObject productObject = new JSONObject(requestBody);
@@ -631,6 +692,11 @@ public class Response {
         }
 
         private void handleUpdateProduct(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -672,6 +738,11 @@ public class Response {
         }
 
         private void handleDeleteProduct(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int productId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -693,6 +764,21 @@ public class Response {
 
             sendErrorResponse(exchange, 404, "Product not found");
         }
+
+        private Map<String, String> parseQueryParams(String query) {
+            Map<String, String> params = new HashMap<>();
+            if (query != null) {
+                String[] keyValuePairs = query.split("&");
+                for (String pair : keyValuePairs) {
+                    String[] keyValue = pair.split("=");
+                    if (keyValue.length == 2) {
+                        params.put(keyValue[0], keyValue[1]);
+                    }
+                }
+            }
+            return params;
+        }
+
     }
 
     static class OrdersHandler implements HttpHandler {
@@ -740,6 +826,11 @@ public class Response {
 
 
         private void handleGetOrders(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             try (Connection connection = Database.connect();
                  Statement statement = connection.createStatement();
                  ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_orders")) {
@@ -767,6 +858,11 @@ public class Response {
 
 
         private void handleGetOrderById(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -815,6 +911,11 @@ public class Response {
 
 
         private void handleCreateOrder(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String requestBody = Request.getRequestData(exchange);
             try {
                 JSONObject orderObject = new JSONObject(requestBody);
@@ -894,6 +995,11 @@ public class Response {
 
 
         private void handleUpdateOrder(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -936,6 +1042,10 @@ public class Response {
 
 
         private void handleUpdateDetailsOrder(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
 
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
@@ -976,6 +1086,11 @@ public class Response {
 
 
         private void handleDeleteOrder(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
             String path = exchange.getRequestURI().getPath();
             int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
 
@@ -1001,6 +1116,329 @@ public class Response {
             }
 
             sendErrorResponse(exchange, 404, "Order not found");
+        }
+    }
+
+    static class ReviewsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+
+
+            switch (method) {
+                case "GET":
+                    if (path.equals("/reviews")) {
+                        handleGetReviews(exchange);
+                        return;
+                    } else if (path.matches("/reviews/\\d+")) {
+                        handleGetReviewsById(exchange);
+                        return;
+                    }
+                    break;
+                case "POST":
+                    if (path.matches("/reviews")) {
+                        handleCreateReviews(exchange);
+                        return;
+                    }
+                    break;
+                case "PUT":
+                    if (path.matches("/reviews/\\d+")) {
+                        handleUpdateReviews(exchange);
+                        return;
+                    }
+                    break;
+                case "DELETE":
+                    if (path.matches("/reviews/\\d+")) {
+                        handleDeleteReviews(exchange);
+                        return;
+                    }
+                    break;
+            }
+
+            sendErrorResponse(exchange, 404, "Not Found");
+        }
+
+
+        private void handleGetReviews(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+            // Mendapatkan nilai query params "price" dari URL
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> queryParams = parseQueryParams(query);
+            String star = queryParams.get("star");
+
+
+            if (star != null) {
+                // Menampilkan pengguna berdasarkan tipe (type)
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "SELECT * FROM tb_reviews WHERE star = ?")) {
+
+                    statement.setString(1, star);
+                    ResultSet resultSet = statement.executeQuery();
+
+                    JSONArray reviewsArray = new JSONArray();
+                    while (resultSet.next()) {
+                        JSONObject reviewObject = new JSONObject();
+                        reviewObject.put("id_order", resultSet.getInt("id_order"));
+                        reviewObject.put("star", resultSet.getInt("star"));
+                        reviewObject.put("description", resultSet.getString("description"));
+
+                        reviewsArray.put(reviewObject);
+                    }
+
+                    JSONObject response = new JSONObject();
+                    response.put("tb_reviews", reviewsArray);
+
+                    sendResponse(exchange, 200, response.toString());
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                }
+            }
+            else {
+                try (Connection connection = Database.connect();
+                     Statement statement = connection.createStatement();
+                     ResultSet resultSet = statement.executeQuery("SELECT * FROM tb_reviews")) {
+
+                    JSONArray reviewsArray = new JSONArray();
+
+                    while (resultSet.next()) {
+                        JSONObject reviewObject = new JSONObject();
+                        reviewObject.put("id_order", resultSet.getInt("id_order"));
+                        reviewObject.put("star", resultSet.getInt("star"));
+                        reviewObject.put("description", resultSet.getString("description"));
+
+                        reviewsArray.put(reviewObject);
+                    }
+
+                    sendResponse(exchange, 200, reviewsArray.toString());
+                } catch (SQLException | JSONException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                }
+            }
+        }
+
+
+        private void handleGetReviewsById(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect();
+                 PreparedStatement statement = connection.prepareStatement(
+                         "SELECT tb_reviews.id_order, tb_reviews.star, tb_reviews.description, " +
+                                 "tb_orders.id_user, tb_orders.note, tb_orders.total, " +
+                                 "tb_orders.discount, tb_orders.is_paid " +
+                                 "FROM tb_reviews " +
+                                 "LEFT JOIN tb_orders ON tb_reviews.id_order = tb_orders.id_order " +
+                                 "WHERE tb_reviews.id_order = ?")) {
+
+                statement.setInt(1, orderId);
+
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()) {
+                    JSONObject reviewObject = new JSONObject();
+                    reviewObject.put("id_order", resultSet.getInt("id_order"));
+                    reviewObject.put("star", resultSet.getInt("star"));
+                    reviewObject.put("description", resultSet.getString("description"));
+
+                    JSONArray ordersArray = new JSONArray();
+                    do {
+                        JSONObject ordersObject = new JSONObject();
+                        ordersObject.put("id_user", resultSet.getInt("id_user"));
+                        ordersObject.put("note", resultSet.getString("note"));
+                        ordersObject.put("total", resultSet.getInt("total"));
+                        ordersObject.put("discount", resultSet.getInt("discount"));
+                        ordersObject.put("is_paid", resultSet.getBoolean("is_paid"));
+                        ordersArray.put(ordersObject);
+                    } while (resultSet.next());
+
+                    if (ordersArray.length() > 0) {
+                        reviewObject.put("tb_orders", ordersArray);
+                    }
+                    sendResponse(exchange, 200, reviewObject.toString());
+                    return;
+                }
+            } catch (SQLException | JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 500, "Internal Server Error");
+            }
+            sendErrorResponse(exchange, 404, "Order not found");
+        }
+
+
+        private void handleCreateReviews(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject reviewsObject = new JSONObject(requestBody);
+                int orderId = reviewsObject.getInt("id_order");
+                int star = reviewsObject.getInt("star");
+                String description = reviewsObject.getString("description");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "INSERT INTO tb_reviews (id_order, star, description) " +
+                                     "VALUES (?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+
+                    statement.setInt(1, orderId);
+                    statement.setInt(2, star);
+                    statement.setString(3, description);
+
+                    int rowsAffected = statement.executeUpdate();
+                    if (rowsAffected == 0) {
+                        sendErrorResponse(exchange, 500, "Failed to create review");
+                        return;
+                    }
+
+                    ResultSet generatedKeys = statement.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        orderId = generatedKeys.getInt(1);
+                    } else {
+                        sendErrorResponse(exchange, 500, "Failed to create review");
+                        return;
+                    }
+
+                    // Check if the order has order details
+                    if (reviewsObject.has("tb_orders")) {
+                        JSONArray ordersArray = reviewsObject.getJSONArray("tb_orders");
+                        for (int i = 0; i < ordersArray.length(); i++) {
+                            JSONObject ordersObject = ordersArray.getJSONObject(i);
+                            orderId = ordersObject.getInt("id_order");
+                            int userId = ordersObject.getInt("id_user");
+                            String note = ordersObject.getString("note");
+                            int total = ordersObject.getInt("total");
+                            int discount = ordersObject.getInt("discount");
+                            boolean is_paid = ordersObject.getBoolean("is_paid");
+
+
+                            // Insert order details data into the tb_order_details table
+                            try (PreparedStatement orderStatement = connection.prepareStatement(
+                                    "INSERT INTO tb_orders (id_order, id_user, note, total, discount, is_paid) " +
+                                            "VALUES (?, ?, ?, ?, ?, ?)")) {
+
+                                orderStatement.setInt(1, orderId);
+                                orderStatement.setInt(2, userId);
+                                orderStatement.setString(3, note);
+                                orderStatement.setInt(4, total);
+                                orderStatement.setInt(5, discount);
+                                orderStatement.setBoolean(6, is_paid);
+
+                                orderStatement.executeUpdate();
+                            }
+                        }
+                    }
+
+                    // Create the response object
+                    JSONObject response = new JSONObject();
+                    response.put("message", "Reviews created successfully");
+                    response.put("id_order", orderId);
+
+                    sendResponse(exchange, 201, response.toString());
+                    return;
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    sendErrorResponse(exchange, 500, "Internal Server Error");
+                    return;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                sendErrorResponse(exchange, 400, "Invalid request body");
+                return;
+            }
+        }
+
+
+        private void handleUpdateReviews(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            String requestBody = Request.getRequestData(exchange);
+            try {
+                JSONObject reviewsObject = new JSONObject(requestBody);
+                orderId = reviewsObject.getInt("id_order");
+                int star = reviewsObject.getInt("star");
+                String description = reviewsObject.getString("description");
+
+                try (Connection connection = Database.connect();
+                     PreparedStatement statement = connection.prepareStatement(
+                             "UPDATE tb_reviews SET id_order = ?, star = ?, description = ? WHERE id_order = ?")) {
+
+
+                    statement.setInt(1, orderId);
+                    statement.setInt(2, star);
+                    statement.setString(3, description);
+
+                    int affectedRows = statement.executeUpdate();
+                    if (affectedRows > 0) {
+                        JSONObject responseObj = new JSONObject();
+                        responseObj.put("message", "Reviews updated successfully");
+                        sendResponse(exchange, 200, responseObj.toString());
+                        return;
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 400, "Bad Request");
+        }
+
+        private void handleDeleteReviews(HttpExchange exchange) throws IOException {
+            if (!Server.validateApiKey(exchange)) {
+                sendErrorResponse(exchange, 401, "Unauthorized");
+                return;
+            }
+
+            String path = exchange.getRequestURI().getPath();
+            int orderId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
+
+            try (Connection connection = Database.connect()) {
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "DELETE FROM tb_reviews WHERE id_order = ?")) {
+                    statement.setInt(1, orderId);
+                    statement.executeUpdate();
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            sendErrorResponse(exchange, 404, "Review not found");
+        }
+        private Map<String, String> parseQueryParams(String query) {
+            Map<String, String> params = new HashMap<>();
+            if (query != null) {
+                String[] keyValuePairs = query.split("&");
+                for (String pair : keyValuePairs) {
+                    String[] keyValue = pair.split("=");
+                    if (keyValue.length == 2) {
+                        params.put(keyValue[0], keyValue[1]);
+                    }
+                }
+            }
+            return params;
         }
     }
 }

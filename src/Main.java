@@ -18,6 +18,7 @@ public class Main {
         server.createContext("/users", new Response.UsersHandler());
         server.createContext("/products", new Response.ProductsHandler());
         server.createContext("/orders", new Response.OrdersHandler());
+        server.createContext("/reviews", new Response.ReviewsHandler());
 
         server.setExecutor(null);
         server.createContext("/api/data", new Server.DataHandler());
