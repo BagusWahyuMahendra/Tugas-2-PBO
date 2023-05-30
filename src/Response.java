@@ -464,10 +464,7 @@ public class Response {
         }
         sendResponse(exchange, statusCode, errorObject.toString());
     }
-    //    private static boolean validateApiKey(HttpExchange exchange) {
-    //        String apiKey = exchange.getRequestHeaders().getFirst("X-API-Key");
-    //        return apiKey != null && apiKey.equals(API_KEY);
-    //    }
+
 
     static class ProductsHandler implements HttpHandler {
         @Override
