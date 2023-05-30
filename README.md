@@ -34,4 +34,48 @@ Pada program ini, terdapat beberapa Class yang didesain agar dapat berperan seba
 
 
 
-# Hasil Penggunaan API pada Database e-Commerce
+# Contoh Pengujian API pada Database E-Commerce
+1. Menampilkan seluruh user yang ada pada tabel users menggunakan : GET http://127.0.0.1:8002/users
+
+
+![Screenshot 2023-05-30 223314](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/99d58ce3-f47c-4dc6-a2b0-e3fe96f1c8b3)
+
+
+2. Menampilkan user sekalipun address juga muncul dengan berdasarkan id user menggunakan : GET http://127.0.0.1:8002/users/3
+
+
+![Screenshot 2023-05-30 223325](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/7473ac8e-cd00-4e6f-a5c8-401328c8165e)
+
+
+
+3. Menampilkan user berdasarkan type user menggunakan param : http://127.0.0.1:8002/users?type=seller
+
+
+![Screenshot 2023-05-30 223414](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/aed01457-5d4c-4620-8076-880ceb099a9e)
+
+
+
+4. Memperbaharui data pada salah satu user berdasarkan id menggunakan : PUT http://127.0.0.1:8002/users/addresses/10. Pada PUT harus mengisi bagian body yang formatnya JSON. Misalkan pada contoh berikut yang awalnya line 1 hanya Jl. Kenjeran, sekarang telah diperbaharui menjadi Jl. Kenjeran Timur
+
+
+![Screenshot 2023-05-30 224340](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/5a29c4bc-6a24-4b72-ae28-585b6722f95b)
+
+
+
+5. Menambahkan data ke dalam tabel users menggunakan : POST http://127.0.0.1:8002/users. Misalnya ingin menambahkan user baru dengan id user 11
+
+
+
+![Screenshot 2023-05-30 223826](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/1b935c0d-0936-47fd-afe2-d041a64b5605)
+
+
+
+
+6. Menghapus salah satu data pada tabel user berdasarkan id user, misalnya menghapus id 11 menggunakan : DELETE http://127.0.0.1:8002/users/11
+
+
+
+![Screenshot 2023-05-30 224437](https://github.com/BagusWahyuMahendra/Tugas-2-PBO/assets/114908291/31a6d691-aa04-4069-ba74-346f21487e8b)
+
+
+
